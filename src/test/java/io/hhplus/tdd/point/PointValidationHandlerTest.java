@@ -32,7 +32,8 @@ class PointValidationHandlerTest {
         long amount = 999000L;
 
         // when // then
-        pointValidationHandler.validateMaxPointLimit(amount, originUserPoint);
+        // 예외가 발생하지 않으면 테스트 성공
+        assertDoesNotThrow(() -> pointValidationHandler.validateMaxPointLimit(amount, originUserPoint));
     }
 
 
@@ -56,7 +57,7 @@ class PointValidationHandlerTest {
         long amount = 1000L;
 
         // when // then
-        pointValidationHandler.validateMinPointLimit(amount, originUserPoint);
+        assertDoesNotThrow(() -> pointValidationHandler.validateMinPointLimit(amount, originUserPoint));
     }
 
     @Test
@@ -77,7 +78,7 @@ class PointValidationHandlerTest {
         long amount = 1L;
 
         // when // then
-        pointValidationHandler.validateChargePointAboveZero(amount);
+        assertDoesNotThrow(() -> pointValidationHandler.validateChargePointAboveZero(amount));
     }
 
     @Test
@@ -98,7 +99,7 @@ class PointValidationHandlerTest {
         long amount = 1L;
 
         // when // then
-        pointValidationHandler.validateUsePointAboveZero(amount);
+        assertDoesNotThrow(() -> pointValidationHandler.validateUsePointAboveZero(amount));
     }
 
 }
