@@ -12,8 +12,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.*;
 
 class PointServiceTest {
 
@@ -34,7 +35,7 @@ class PointServiceTest {
                 .willReturn(new UserPoint(1L, 1000L, 100000L));
 
         // when // then
-        assertThat(userPointTable.selectById(id))
+        assertThat(pointService.selectById(id))
                 .extracting("id", "point", "updateMillis")
                 .contains(id, point, updateMillis);
     }
@@ -64,38 +65,127 @@ class PointServiceTest {
     }
 
     @Test
-    void 포인트_충전_시에_결과값이_1_000_000_초과일_경우_요청은_실패한다() {
+    void 포인트_충전_시에_결과값이_1_000_000원_초과일_경우_요청은_실패한다() {
         // given
+        long id = 1L;
+        long amount = 1001L;
+        long originUserPoint = 999000L;
 
-        // when
+        given(userPointTable.selectById(1L))
+                .willReturn(new UserPoint(1L, 999000L, 100000L));
 
-        // then
+        // 반환값이 void인 메서드를 스텁하려면 **doThrow(...).when(...).method() 구조 사용
+        doThrow(new RuntimeException("보유 포인트는 100만원 이상일 수 없습니다."))
+                .when(pointValidationHandler)
+                .validateMaxPointLimit(1001L, 999000L);
+
+        // when // then
+        assertThrows(RuntimeException.class, () -> {
+            pointService.charge(id, amount);
+        });
+
     }
 
     @Test
-    void 포인트_충전_시에_결과값이_0_이상_1_000_000_이하일_경우_요청은_성공한다() {
+    void 포인트_충전_시에_결과값이_0원_이상_1_000_000원_이하일_경우_요청은_성공한다() {
         // given
+        long id = 1L;
+        long amount = 1000L;
+        long updateMillis = 100000L;
+        long originUserPoint = 999000L;
 
-        // when
+        given(userPointTable.selectById(1L))
+                .willReturn(new UserPoint(id, originUserPoint, updateMillis));
 
-        // then
+        given(userPointTable.insertOrUpdate(1L, 1000L))
+                .willReturn(new UserPoint(id, originUserPoint + amount, updateMillis));
+
+        // when // then
+        assertThat(pointService.charge(id, amount))
+                .extracting("id", "point", "updateMillis")
+                .contains(id, originUserPoint + amount , updateMillis);
     }
 
     @Test
-    void 포인트_사용_시에_결과값이_0_미만일_경우_요청은_실패한다() {
+    void 포인트_사용_시에_결과값이_0원_미만일_경우_요청은_실패한다() {
         // given
+        long id = 1L;
+        long amount = 1001L;
+        long originUserPoint = 1000L;
+        long updateMillis = 100000L;
 
-        // when
+        given(userPointTable.selectById(1L))
+                .willReturn(new UserPoint(id, originUserPoint, updateMillis));
 
-        // then
+        doThrow(new RuntimeException("보유 포인트는 0원 이하일 수 없습니다."))
+                .when(pointValidationHandler)
+                .validateMinPointLimit(1001L, 1000L);
+
+        // when // then
+        assertThrows(RuntimeException.class, () -> {
+            pointService.use(id, amount);
+        });
     }
 
     @Test
-    void 포인트_사용_시에_결과값이_0_이상일_경우_요청은_성공한다() {
+    void 포인트_사용_시에_결과값이_0원_이상일_경우_요청은_성공한다() {
         // given
+        long id = 1L;
+        long amount = 1000L;
+        long updateMillis = 100000L;
+        long originUserPoint = 1000L;
 
-        // when
+        given(userPointTable.selectById(1L))
+                .willReturn(new UserPoint(id, originUserPoint, updateMillis));
 
-        // then
+        given(userPointTable.insertOrUpdate(id, amount))
+                .willReturn(new UserPoint(id, originUserPoint - amount, updateMillis));
+
+        // when // then
+        assertThat(pointService.use(id, amount))
+                .extracting("id", "point", "updateMillis")
+                .contains(id, originUserPoint - amount , updateMillis);
     }
+
+    @Test
+    void 포인트_충전_시에_충전_요청값이_0원_이하일_경우_요청은_실패한다() {
+        // given
+        long id = 1L;
+        long amount = 0L;
+
+        doThrow(new RuntimeException("충전 요청 포인트는 0원 이하일 수 없습니다."))
+                .when(pointValidationHandler)
+                .validateChargePointAboveZero(amount);
+
+        // when // then
+        assertThrows(RuntimeException.class, () -> {
+            pointService.charge(id, amount);
+        });
+    }
+
+//    @Test
+//    void 포인트_충전_시에_충전_요청값이_1원_이상일_경우_요청은_성공한다() {
+//
+//    }
+
+    @Test
+    void 포인트_사용_시에_사용_요청값이_0원_이하일_경우_요청은_실패한다() {
+        // given
+        long id = 1L;
+        long amount = 0L;
+
+        doThrow(new RuntimeException("사용 요청 포인트는 0원 이하일 수 없습니다."))
+                .when(pointValidationHandler)
+                .validateUsePointAboveZero(0L);
+
+        // when // then
+        assertThrows(RuntimeException.class, () -> {
+            pointService.use(id, amount);
+        });
+    }
+
+//    @Test
+//    void 포인트_사용_시에_사용_요청값이_1원_이상일_경우_요청은_성공한다() {
+//
+//    }
 }

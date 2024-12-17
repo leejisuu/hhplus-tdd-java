@@ -7,18 +7,13 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+@RequiredArgsConstructor
 @Service
 public class PointService {
 
     private final UserPointTable userPointTable;
     private final PointHistoryTable pointHistoryTable;
     private final PointValidationHandler pointValidationHandler;
-
-    public PointService(UserPointTable userPointTable, PointHistoryTable pointHistoryTable, PointValidationHandler pointValidationHandler) {
-        this.userPointTable = userPointTable;
-        this.pointHistoryTable = pointHistoryTable;
-        this.pointValidationHandler = pointValidationHandler;
-    }
 
     public UserPoint selectById(long id) {
 
@@ -31,20 +26,28 @@ public class PointService {
     }
 
     public UserPoint charge(long id, long amount) {
-        pointValidationHandler.validatePointAboveZero(amount);
-        pointValidationHandler.validateMaxPointLimit(id, amount);
+       //  pointValidationHandler.validateChargePointAboveZero(amount);
 
-        pointHistoryTable.insert(id, amount, TransactionType.CHARGE, System.currentTimeMillis());
+        UserPoint originUserPoint = userPointTable.selectById(id);
+        // pointValidationHandler.validateMaxPointLimit(amount, originUserPoint.point());
 
-        return userPointTable.insertOrUpdate(id, amount);
+        UserPoint newUserPoint = userPointTable.insertOrUpdate(id, originUserPoint.point() - amount);
+
+        // pointHistoryTable.insert(id, amount, TransactionType.CHARGE, System.currentTimeMillis());
+
+        return newUserPoint;
     }
 
     public UserPoint use(long id, long amount) {
-        pointValidationHandler.validatePointAboveZero(amount);
-        pointValidationHandler.validateMinPointLimit(id, amount);
+        pointValidationHandler.validateUsePointAboveZero(amount);
 
-        pointHistoryTable.insert(id, amount, TransactionType.USE, System.currentTimeMillis());
+        UserPoint originUserPoint = userPointTable.selectById(id);
+        pointValidationHandler.validateMinPointLimit(amount, originUserPoint.point());
 
-        return userPointTable.insertOrUpdate(id, amount);
+        UserPoint newUserPoint = userPointTable.insertOrUpdate(id, originUserPoint.point() + amount);
+
+        // pointHistoryTable.insert(id, amount, TransactionType.USE, System.currentTimeMillis());
+
+        return newUserPoint;
     }
 }

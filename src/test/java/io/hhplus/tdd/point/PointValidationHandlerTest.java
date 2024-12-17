@@ -10,70 +10,95 @@ import static org.mockito.Mockito.mock;
 
 class PointValidationHandlerTest {
 
-    private final UserPointTable userPointTable = mock(UserPointTable.class);
-
-    private final PointValidationHandler pointValidationHandler = new PointValidationHandler(userPointTable);
+    private final PointValidationHandler pointValidationHandler = new PointValidationHandler();
 
     @Test
-    void 포인트_충전_시에_결과값이_1_000_000_초과일_경우_검증이_실패한다() {
+    void 포인트_충전_시에_결과값이_1_000_000원_초과일_경우_포인트_유효성_검증이_실패한다() {
         // given
-        long userId = 1L;
+        long originUserPoint = 1001L;
         long amount = 999000L;
-
-        given(userPointTable.selectById(1L))
-                .willReturn(new UserPoint(1L, 1001L, 100000L));
-
 
         // when // then
         assertThrows(
                 RuntimeException.class,
-                () -> pointValidationHandler.validateMaxPointLimit(userId, amount)
+                () -> pointValidationHandler.validateMaxPointLimit(amount, originUserPoint)
         );
     }
 
     @Test
-    void 포인트_충전_시에_결과값이_0_이상_1_000_000_이하일_경우_검증이_통과된다() {
+    void 포인트_충전_시에_결과값이_0원_이상_1_000_000원_이하일_경우_포인트_유효성_검증이_통과된다() {
         // given
-        long userId = 1L;
+        long originUserPoint = 1000L;
         long amount = 999000L;
 
-        given(userPointTable.selectById(1L))
-                .willReturn(new UserPoint(1L, 1000L, 100000L));
-
-
         // when // then
-        pointValidationHandler.validateMaxPointLimit(userId, amount);
+        pointValidationHandler.validateMaxPointLimit(amount, originUserPoint);
     }
 
 
     @Test
-    void 포인트_사용_시에_결과값이_0_미만일_경우_검증이_실패한다() {
+    void 포인트_사용_시에_사용_요청_포인트가_0원_미만일_경우_포인트_유효성_검증이_실패한다() {
         // given
-        long userId = 1L;
+        long originUserPoint = 1000L;
         long amount = 1001L;
-
-        given(userPointTable.selectById(1L))
-                .willReturn(new UserPoint(1L, 1000L, 100000L));
 
         // when // then
         assertThrows(
                 RuntimeException.class,
-                () -> pointValidationHandler.validateMinPointLimit(userId, amount)
+                () -> pointValidationHandler.validateMinPointLimit(amount, originUserPoint)
         );
     }
 
     @Test
-    void 포인트_사용_시에_결과값이_0_이상일_경우_검증이_통과된다() {
+    void 포인트_사용_시에_결과값이_0원_이상일_경우_포인트_유효성_검증이_통과된다() {
         // given
-        long userId = 1L;
-        long amount = 1001L;
-
-        given(userPointTable.selectById(1L))
-                .willReturn(new UserPoint(1L, 1001L, 100000L));
+        long originUserPoint = 1000L;
+        long amount = 1000L;
 
         // when // then
-        pointValidationHandler.validateMinPointLimit(userId, amount);
+        pointValidationHandler.validateMinPointLimit(amount, originUserPoint);
     }
 
+    @Test
+    void 포인트_충전_시에_충전_요청_포인트가_0원_이하면_포인트_유효성_검증이_실패한다() {
+        // given
+        long amount = 0L;
+
+        // when // then
+        assertThrows(
+                RuntimeException.class,
+                () -> pointValidationHandler.validateChargePointAboveZero(amount)
+        );
+    }
+
+    @Test
+    void 포인트_충전_시에_충전_요청_포인트가_1원_이상이면_포인트_유효성_검증이_통과한다() {
+        // given
+        long amount = 1L;
+
+        // when // then
+        pointValidationHandler.validateChargePointAboveZero(amount);
+    }
+
+    @Test
+    void 포인트_사용_시에_사용_요청_포인트가_0원_이하면_포인트_유효성_검증이_실패한다() {
+        // given
+        long amount = 0L;
+
+        // when // then
+        assertThrows(
+                RuntimeException.class,
+                () -> pointValidationHandler.validateUsePointAboveZero(amount)
+        );
+    }
+
+    @Test
+    void 포인트_사용_시에_사용_요청_포인트가_1원_이상이면_포인트_유효성_검증이_통과한다() {
+        // given
+        long amount = 1L;
+
+        // when // then
+        pointValidationHandler.validateUsePointAboveZero(amount);
+    }
 
 }
