@@ -26,16 +26,14 @@ public class PointService {
     }
 
     public UserPoint charge(long id, long amount) {
-       //  pointValidationHandler.validateChargePointAboveZero(amount);
+       pointValidationHandler.validateChargePointAboveZero(amount);
 
         UserPoint originUserPoint = userPointTable.selectById(id);
-        // pointValidationHandler.validateMaxPointLimit(amount, originUserPoint.point());
-
-        UserPoint newUserPoint = userPointTable.insertOrUpdate(id, originUserPoint.point() - amount);
+        pointValidationHandler.validateMaxPointLimit(amount, originUserPoint.point());
 
         // pointHistoryTable.insert(id, amount, TransactionType.CHARGE, System.currentTimeMillis());
 
-        return newUserPoint;
+        return userPointTable.insertOrUpdate(id, originUserPoint.point() + amount);
     }
 
     public UserPoint use(long id, long amount) {
@@ -44,10 +42,8 @@ public class PointService {
         UserPoint originUserPoint = userPointTable.selectById(id);
         pointValidationHandler.validateMinPointLimit(amount, originUserPoint.point());
 
-        UserPoint newUserPoint = userPointTable.insertOrUpdate(id, originUserPoint.point() + amount);
-
         // pointHistoryTable.insert(id, amount, TransactionType.USE, System.currentTimeMillis());
 
-        return newUserPoint;
+        return userPointTable.insertOrUpdate(id, originUserPoint.point() - amount);
     }
 }
