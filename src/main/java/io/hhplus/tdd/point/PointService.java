@@ -13,37 +13,57 @@ public class PointService {
 
     private final UserPointTable userPointTable;
     private final PointHistoryTable pointHistoryTable;
-    private final PointValidationHandler pointValidationHandler;
 
-    public UserPoint selectById(long id) {
+    // [정책] 유저가 보유 할 수 있는 최대 포인트는 100만 포인트이다.
+    private final long MAX_AVAILABLE_POINT = 1_000_000L;
+
+    public UserPoint selectUserPointById(long id) {
 
         return userPointTable.selectById(id);
     }
 
-    public List<PointHistory> selectAllByUserId(long id) {
+    public List<PointHistory> selectPointHistoryListByUserId(long id) {
 
         return pointHistoryTable.selectAllByUserId(id);
     }
 
-    public UserPoint charge(long id, long amount) {
-       pointValidationHandler.validateChargePointAboveZero(amount);
+    public UserPoint chargeUserPoint(long id, long amount, long updateMillis) {
+        if(amount <= 0) {
+            throw new RuntimeException("충전 요청 금액은 0원보다 커야 합니다.");
+        }
+        if(amount > MAX_AVAILABLE_POINT) {
+            throw new RuntimeException("충전 요청 금액은 최대 100만원을 초과할 수 없습니다.");
+        }
 
         UserPoint originUserPoint = userPointTable.selectById(id);
-        pointValidationHandler.validateMaxPointLimit(amount, originUserPoint.point());
+        if(originUserPoint.point() + amount > MAX_AVAILABLE_POINT) {
+            throw new RuntimeException("충전 후 보유 포인트는 최대 100만원을 초과할 수 없습니다.");
+        }
 
-        // pointHistoryTable.insert(id, amount, TransactionType.CHARGE, System.currentTimeMillis());
+        UserPoint chargedUserPoint = userPointTable.insertOrUpdate(id, originUserPoint.point() + amount);
 
-        return userPointTable.insertOrUpdate(id, originUserPoint.point() + amount);
+        pointHistoryTable.insert(id, amount, TransactionType.CHARGE, updateMillis);
+
+        return chargedUserPoint;
     }
 
-    public UserPoint use(long id, long amount) {
-        pointValidationHandler.validateUsePointAboveZero(amount);
+    public UserPoint useUserPoint(long id, long amount, long updateMillis) {
+        if(amount <= 0) {
+            throw new RuntimeException("사용 요청 금액은 0원보다 커야 합니다.");
+        }
+        if(amount > MAX_AVAILABLE_POINT) {
+            throw new RuntimeException("사용 요청 금액은 최대 100만원을 초과할 수 없습니다.");
+        }
 
         UserPoint originUserPoint = userPointTable.selectById(id);
-        pointValidationHandler.validateMinPointLimit(amount, originUserPoint.point());
+        if(originUserPoint.point() - amount < 0) {
+            throw new RuntimeException("사용하려는 포인트는 보유한 포인트보다 클 수 없습니다.");
+        }
 
-        // pointHistoryTable.insert(id, amount, TransactionType.USE, System.currentTimeMillis());
+        UserPoint usedUserPoint = userPointTable.insertOrUpdate(id, originUserPoint.point() - amount);
 
-        return userPointTable.insertOrUpdate(id, originUserPoint.point() - amount);
+        pointHistoryTable.insert(id, amount, TransactionType.USE, updateMillis);
+
+        return usedUserPoint;
     }
 }

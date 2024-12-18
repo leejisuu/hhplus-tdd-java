@@ -22,7 +22,7 @@ public class PointController {
     public UserPoint point(
             @PathVariable long id
     ) {
-        return pointService.selectById(id);
+        return pointService.selectUserPointById(id);
     }
 
     /**
@@ -32,7 +32,7 @@ public class PointController {
     public List<PointHistory> history(
             @PathVariable long id
     ) {
-        return pointService.selectAllByUserId(id);
+        return pointService.selectPointHistoryListByUserId(id);
     }
 
     /**
@@ -43,7 +43,9 @@ public class PointController {
             @PathVariable long id,
             @RequestBody long amount
     ) {
-        return pointService.charge(id, amount);
+        // 테스트하기 어려운 값인 updateMillis을 분리.
+        long updateMillis = System.currentTimeMillis();
+        return pointService.chargeUserPoint(id, amount, updateMillis);
     }
 
     /**
@@ -54,6 +56,8 @@ public class PointController {
             @PathVariable long id,
             @RequestBody long amount
     ) {
-        return pointService.use(id, amount);
+        // 테스트하기 어려운 값인 updateMillis을 분리.
+        long updateMillis = System.currentTimeMillis();
+        return pointService.useUserPoint(id, amount, updateMillis);
     }
 }
