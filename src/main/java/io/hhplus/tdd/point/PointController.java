@@ -1,8 +1,6 @@
 package io.hhplus.tdd.point;
 
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,7 +11,6 @@ import java.util.List;
 public class PointController {
 
     private final PointService pointService;
-    private static final Logger log = LoggerFactory.getLogger(PointController.class);
 
     /**
      * TODO - 특정 유저의 포인트를 조회하는 기능을 작성해주세요.
@@ -32,7 +29,7 @@ public class PointController {
     public List<PointHistory> history(
             @PathVariable long id
     ) {
-        return pointService.selectPointHistoryListByUserId(id);
+        return pointService.selectPointHistoriesByUserId(id);
     }
 
     /**
@@ -43,9 +40,7 @@ public class PointController {
             @PathVariable long id,
             @RequestBody long amount
     ) {
-        // 테스트하기 어려운 값인 updateMillis을 분리.
-        long updateMillis = System.currentTimeMillis();
-        return pointService.chargeUserPoint(id, amount, updateMillis);
+        return pointService.chargeUserPoint(id, amount);
     }
 
     /**
@@ -56,8 +51,6 @@ public class PointController {
             @PathVariable long id,
             @RequestBody long amount
     ) {
-        // 테스트하기 어려운 값인 updateMillis을 분리.
-        long updateMillis = System.currentTimeMillis();
-        return pointService.useUserPoint(id, amount, updateMillis);
+        return pointService.useUserPoint(id, amount);
     }
 }

@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
-class PointServiceTest {
+class PointServiceUnitTest {
 
     private final UserPointTable userPointTable = mock(UserPointTable.class);
     private final PointHistoryTable pointHistoryTable = mock(PointHistoryTable.class);
@@ -18,7 +18,7 @@ class PointServiceTest {
     private final PointService pointService = new PointService(userPointTable, pointHistoryTable);
 
     @Test
-    void id로_특정_유저의_포인트_정보를_조회한다() { // 통과
+    void id로_특정_유저의_포인트_정보를_조회한다() {
         // given
         long id = 1L;
         long point = 1000L;
@@ -36,7 +36,25 @@ class PointServiceTest {
     }
 
     @Test
-    void id로_특정_유저의_포인트_충전_또는_사용_내역을_조회한다() { // 통과
+    void 유저의_초기_포인트는_0원이다() {
+        // given
+        long id = 1L;
+        long initalPoint = 0L;
+        long updateMillis = 100000L;
+
+        given(userPointTable.selectById(id))
+                .willReturn(new UserPoint(id, initalPoint, updateMillis));
+
+        // when // then
+        assertThat(pointService.selectUserPointById(id))
+                .extracting("id", "point", "updateMillis")
+                .containsExactly(id, initalPoint, updateMillis);
+
+        verify(userPointTable, times(1)).selectById(id);
+    }
+
+    @Test
+    void id로_특정_유저의_포인트_충전_또는_사용_내역을_조회한다() {
         // given
         long userId = 1L;
 
@@ -49,7 +67,7 @@ class PointServiceTest {
         ));
 
         // when // then
-        assertThat(pointService.selectPointHistoryListByUserId(userId)).hasSize(4)
+        assertThat(pointService.selectPointHistoriesByUserId(userId)).hasSize(4)
                 .extracting("id", "userId", "amount", "type", "updateMillis")
                 .containsExactly(
                         tuple(1L, userId, 100L, TransactionType.CHARGE, 10000L),
@@ -65,10 +83,9 @@ class PointServiceTest {
     void 포인트_충전_시_충전_금액이_0원보다_작으면_예외를_발생한다() {
         long id = 1L;
         long willChargePoint = 0L;
-        long updateMillis = 100000L;
 
         // when // then
-        assertThatThrownBy(() -> pointService.chargeUserPoint(id, willChargePoint, updateMillis))
+        assertThatThrownBy(() -> pointService.chargeUserPoint(id, willChargePoint))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("충전 요청 금액은 0원보다 커야 합니다.");
 
@@ -77,7 +94,7 @@ class PointServiceTest {
     }
 
     @Test
-    void 포인트_충전_시에_충전_요청값이_1원보다_커야한다() {
+    void 포인트_충전_시에_충전_요청값이_1원보다_커야_포인트를_저장한다() {
         // given
         long id = 1L;
         long willChargePoint = 1L;
@@ -91,7 +108,7 @@ class PointServiceTest {
         given(userPointTable.insertOrUpdate(id, chargeResultPoint))
                 .willReturn(new UserPoint(id, chargeResultPoint, updateMillis));
 
-        assertThat(pointService.chargeUserPoint(id, willChargePoint, updateMillis))
+        assertThat(pointService.chargeUserPoint(id, willChargePoint))
                 .extracting("id", "point", "updateMillis")
                 .containsExactly(id, chargeResultPoint, updateMillis);
 
@@ -104,10 +121,9 @@ class PointServiceTest {
         // given
         long id = 1L;
         long willChargePoint = 1_000_001L;
-        long updateMillis = 100000L;
 
         // when // then
-        assertThatThrownBy(() -> pointService.chargeUserPoint(id, willChargePoint, updateMillis))
+        assertThatThrownBy(() -> pointService.chargeUserPoint(id, willChargePoint))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("충전 요청 금액은 최대 100만원을 초과할 수 없습니다.");
 
@@ -130,7 +146,7 @@ class PointServiceTest {
         given(userPointTable.insertOrUpdate(id, chargeResultPoint))
                 .willReturn(new UserPoint(id, chargeResultPoint, updateMillis));
 
-        assertThat(pointService.chargeUserPoint(id, willChargePoint, updateMillis))
+        assertThat(pointService.chargeUserPoint(id, willChargePoint))
                 .extracting("id", "point", "updateMillis")
                 .containsExactly(id, chargeResultPoint, updateMillis);
 
@@ -144,12 +160,11 @@ class PointServiceTest {
         long id = 1L;
         long willChargePoint = 1_001L;
         long originPoint = 999_000L;
-        long updateMillis = 100000L;
 
         given(userPointTable.selectById(1L))
                 .willReturn(new UserPoint(1L, originPoint, 100000L));
 
-        assertThatThrownBy(() -> pointService.chargeUserPoint(id, willChargePoint, updateMillis))
+        assertThatThrownBy(() -> pointService.chargeUserPoint(id, willChargePoint))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("충전 후 보유 포인트는 최대 100만원을 초과할 수 없습니다.");
 
@@ -173,7 +188,7 @@ class PointServiceTest {
                 .willReturn(new UserPoint(id, chargeResultPoint, updateMillis));
 
         // when // then
-        assertThat(pointService.chargeUserPoint(id, willChargePoint, updateMillis))
+        assertThat(pointService.chargeUserPoint(id, willChargePoint))
                 .extracting("id", "point", "updateMillis")
                 .containsExactly(id, chargeResultPoint , updateMillis);
 
@@ -186,10 +201,9 @@ class PointServiceTest {
         // given
         long id = 1L;
         long willUsePoint = 0L;
-        long updateMillis = 100000L;
 
         // when // then
-        assertThatThrownBy(() -> pointService.useUserPoint(id, willUsePoint, updateMillis))
+        assertThatThrownBy(() -> pointService.useUserPoint(id, willUsePoint))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("사용 요청 금액은 0원보다 커야 합니다.");
 
@@ -212,7 +226,7 @@ class PointServiceTest {
         given(userPointTable.insertOrUpdate(id, useResultPoint))
                 .willReturn(new UserPoint(id,  useResultPoint, updateMillis));
 
-        assertThat(pointService.useUserPoint(id, willUsePoint, updateMillis))
+        assertThat(pointService.useUserPoint(id, willUsePoint))
                 .extracting("id", "point", "updateMillis")
                 .containsExactly(id, useResultPoint, updateMillis);
 
@@ -225,10 +239,9 @@ class PointServiceTest {
         // given
         long id = 1L;
         long willUsePoint = 1_000_001L;
-        long updateMillis = 100000L;
 
         // when // then
-        assertThatThrownBy(() -> pointService.useUserPoint(id, willUsePoint, updateMillis))
+        assertThatThrownBy(() -> pointService.useUserPoint(id, willUsePoint))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("사용 요청 금액은 최대 100만원을 초과할 수 없습니다.");
 
@@ -237,7 +250,7 @@ class PointServiceTest {
     }
 
     @Test
-    void 포인트_사용_시에_사용_요청값이_1_000_000원_이하면_포인트_충전_성공한다() {
+    void 포인트_사용_시에_사용_요청값이_1_000_000원_이하면_포인트를_저장한다() {
         // given
         long id = 1L;
         long willUsePoint = 1_000_000L;
@@ -251,7 +264,7 @@ class PointServiceTest {
         given(userPointTable.insertOrUpdate(id, useResultPoint))
                 .willReturn(new UserPoint(id, useResultPoint, updateMillis));
 
-        assertThat(pointService.useUserPoint(id, willUsePoint, updateMillis))
+        assertThat(pointService.useUserPoint(id, willUsePoint))
                 .extracting("id", "point", "updateMillis")
                 .containsExactly(id, useResultPoint, updateMillis);
 
@@ -271,7 +284,7 @@ class PointServiceTest {
                 .willReturn(new UserPoint(id, originPoint, updateMillis));
 
         // when // then
-        assertThatThrownBy(() -> pointService.useUserPoint(id, willUsePoint, updateMillis))
+        assertThatThrownBy(() -> pointService.useUserPoint(id, willUsePoint))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("사용하려는 포인트는 보유한 포인트보다 클 수 없습니다.");
 
@@ -295,7 +308,7 @@ class PointServiceTest {
                 .willReturn(new UserPoint(id, useResultPoint, updateMillis));
 
         // when // then
-        assertThat(pointService.useUserPoint(id, willUsePoint, updateMillis))
+        assertThat(pointService.useUserPoint(id, willUsePoint))
                 .extracting("id", "point", "updateMillis")
                 .containsExactly(id, useResultPoint , updateMillis);
 
@@ -322,11 +335,11 @@ class PointServiceTest {
         given(pointHistoryTable.insert(id, willChargePoint, type, updateMillis))
                 .willReturn(new PointHistory(1L, id, willChargePoint, type, updateMillis));
 
-        pointService.chargeUserPoint(id, willChargePoint, updateMillis);
+        pointService.chargeUserPoint(id, willChargePoint);
 
         verify(userPointTable, times(1)).selectById(id);
         verify(userPointTable, times(1)).insertOrUpdate(id, chargeResultPoint);
-        verify(pointHistoryTable, times(1)).insert(id, willChargePoint, type, updateMillis);
+        verify(pointHistoryTable, times(1)).insert(eq(id), eq(willChargePoint), eq(type), anyLong());
     }
 
     @Test
@@ -348,10 +361,10 @@ class PointServiceTest {
         given(pointHistoryTable.insert(id, willUsePoint, type, updateMillis))
                 .willReturn(new PointHistory(1L, id, willUsePoint, type, updateMillis));
 
-        pointService.useUserPoint(id, willUsePoint, updateMillis);
+        pointService.useUserPoint(id, willUsePoint);
 
         verify(userPointTable, times(1)).selectById(id);
         verify(userPointTable, times(1)).insertOrUpdate(id, useResultPoint);
-        verify(pointHistoryTable, times(1)).insert(id, willUsePoint, type, updateMillis);
+        verify(pointHistoryTable, times(1)).insert(eq(id), eq(willUsePoint), eq(type), anyLong());
     }
 }
